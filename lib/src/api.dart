@@ -49,8 +49,12 @@ class API {
     final http.Request request = http.Request("GET", buildUri(path, ip: ip));
     if (data != null) request.body = json.encode(data);
 
-    final http.StreamedResponse response = await client.send(request);
-
+    http.StreamedResponse response;
+    try {
+      response = await client.send(request);
+    } on http.ClientException catch (e) {
+      throw NoConnectivityException(e.message);
+    }
     switch (response.statusCode) {
       case 200:
         return models.ResponseSerializer<T>()
