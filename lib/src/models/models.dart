@@ -1,39 +1,25 @@
 library api.models;
 
-import 'dart:convert' show json, base64;
+import 'dart:convert' show json;
 
-part 'data.dart';
+part 'items.dart';
 part 'item.dart';
 part 'error.dart';
-part 'response.dart';
 part 'online.dart';
-
-String b64enc(String source) {
-  return base64
-      .encode(source.codeUnits)
-      .replaceAll('+', '.')
-      .replaceAll('/', '_')
-      .replaceAll('=', '-');
-}
-
-String b64dec(String source) {
-  return String.fromCharCodes(base64.decode(
-    source.replaceAll('.', '+').replaceAll('_', '/').replaceAll('-', '='),
-  ));
-}
+part 'link.dart';
 
 Serializer serializer<T>() {
   switch (T) {
     case Item:
       return ItemSerializer();
-    case Data:
-      return DataSerializer();
+    case Items:
+      return ItemsSerializer();
     case Error:
       return ErrorSerializer();
-    case Response:
-      return ResponseSerializer();
     case Online:
       return OnlineSerializer();
+    case Link:
+      return LinkSerializer();
     default:
       throw Exception("Serializer for type $T not found");
   }

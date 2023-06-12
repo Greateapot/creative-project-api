@@ -1,5 +1,7 @@
+// ignore_for_file: prefer_void_to_null
+
 import 'dart:io';
-import 'dart:convert' show json;
+import 'dart:convert' show utf8;
 
 import 'package:http/http.dart' as http;
 
@@ -32,86 +34,117 @@ class API {
   static Future<String> _getLocalIP() async {
     for (NetworkInterface interface in await NetworkInterface.list()) {
       for (var address in interface.addresses.map((e) => e.address)) {
-        if (address.startsWith('192.168')) return address;
+        if (address.startsWith('192.168')) {
+          // 192.168.XXX.XXX - стандарт для локальных айпи
+          return address;
+        }
       }
     }
     throw NoConnectivityException("failed to get local ip");
   }
 
-  Uri buildUri(String path, {String? ip}) =>
-      Uri.http("${ip ?? this.ip}:$port", path);
-
-  Future<models.Response<T>> _makeRequest<T>(
+  Future<http.Response> _rawRequest(
     String path, {
     String? ip,
-    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
   }) async {
-    final http.Request request = http.Request("GET", buildUri(path, ip: ip));
-    if (data != null) request.body = json.encode(data);
-
-    http.StreamedResponse response;
     try {
-      response = await client.send(request);
+      return await client
+          .get(Uri.http("${ip ?? this.ip}:$port", path, queryParameters));
     } on http.ClientException catch (e) {
-      throw NoConnectivityException(e.message);
-    }
-    switch (response.statusCode) {
-      case 200:
-        return models.ResponseSerializer<T>()
-            .fromJson(await response.stream.bytesToString());
-      default:
-        throw FetchDataException('StatusCode: ${response.statusCode}');
+      throw FetchDataException(e.message);
     }
   }
 
-  Future<models.Data> list([String? ip]) async {
-    models.Response<models.Data> response = await _makeRequest<models.Data>(
+  T _parseResponse<T>(http.Response response) {
+    try {
+      switch (response.statusCode) {
+        case 200: // ok
+          if (T == Null) {
+            // TODO: use void
+            return null as T;
+          } else {
+            return models
+                .serializer<T>()
+                .fromJson(utf8.decode(response.bodyBytes));
+          }
+        case 400: // bad request
+        case 403: // forbidden
+        case 418: // teapot
+        case 500: // internal server err
+        default:
+          throw models
+              .serializer<models.Error>()
+              .fromJson(utf8.decode(response.bodyBytes));
+      }
+    } on FormatException {
+      throw Exception("ParsingDataException: can't parse response data.");
+    }
+  }
+
+  Future<T> _makeRequest<T>(
+    String path, {
+    String? ip,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return _parseResponse<T>(await _rawRequest(
+      path,
+      ip: ip,
+      queryParameters: queryParameters,
+    ));
+  }
+
+  Future<models.Items> list([String? ip]) async {
+    return await _makeRequest<models.Items>(
       '/list',
       ip: ip,
     );
-
-    if (response.ok) {
-      return response.data!;
-    } else {
-      throw InvalidInputException(response.err!.code.toString());
-    }
   }
 
-  Future<bool> add(models.Item item) async {
-    models.Response response = await _makeRequest(
+  Future<void> add(models.Item item) async {
+    await _makeRequest<Null>(
       '/add',
-      data: models.ItemSerializer().toMap(item),
+      queryParameters: models
+          .serializer<models.Item>()
+          .toMap(item)
+          .map((key, value) => MapEntry(key, value.toString())),
     );
-
-    if (response.ok) {
-      return true;
-    } else {
-      throw InvalidInputException(response.err!.code.toString());
-    }
   }
 
-  Future<bool> del(String title) async {
-    models.Response response = await _makeRequest(
+  Future<void> del(String title) async {
+    await _makeRequest<Null>(
       '/del',
-      data: {"title": models.b64enc(title)},
+      queryParameters: {"title": title},
     );
-
-    if (response.ok) {
-      return true;
-    } else {
-      throw InvalidInputException(response.err!.code.toString());
-    }
   }
 
   Future<models.Online> online() async {
-    models.Response<models.Online> response = await _makeRequest<models.Online>(
-      '/online',
+    return await _makeRequest<models.Online>('/online');
+  }
+
+  Future<void> shutdown() async {
+    await _makeRequest<Null>('/shutdown');
+  }
+
+  Future<models.Link> getLink(String title, [String? ip]) async {
+    return await _makeRequest<models.Link>(
+      '/get',
+      ip: ip,
+      queryParameters: {'title': title},
+    );
+  }
+
+  Future<void> downloadFile(String title, String path, [String? ip]) async {
+    http.Response response = await _rawRequest(
+      '/get',
+      ip: ip,
+      queryParameters: {"title": title},
     );
 
-    if (response.ok) {
-      return response.data!;
+    if (response.statusCode == 200) {
+      await File(path).writeAsBytes(response.bodyBytes);
     } else {
-      throw InvalidInputException(response.err!.code.toString());
+      _parseResponse(response); // оно само вызовет ошибку, не 200 же.
     }
   }
 }

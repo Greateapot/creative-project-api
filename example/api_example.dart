@@ -6,34 +6,37 @@ void main() async {
   final API api = API();
 
   print("get /list");
-  final models.Data d1 = await api.list();
-  for (models.Item item in d1.items) {
+  final models.Items items1 = await api.list();
+  for (models.Item item in items1.items) {
     print(item);
   }
 
   print("get /add");
-  assert(
-    await api.add(
-      models.Item(
-        title: "Me",
-        path: "https://github.com/Greateapot",
-        type: models.ItemType.link,
-      ),
+
+  await api.add(
+    models.Item(
+      title: "Me",
+      path: "https://github.com/Greateapot",
+      type: models.ItemType.link,
     ),
   );
 
   print("get /list");
-  final models.Data d2 = await api.list();
-  for (models.Item item in d2.items) {
+  final models.Items items2 = await api.list();
+  for (models.Item item in items2.items) {
     print(item);
   }
 
+  print("get /get");
+  final models.Link link = await api.getLink("Me");
+  print(link.link);
+
   print("get /del");
-  assert(await api.del("Me"));
+  await api.del("Me");
 
   print("get /list");
-  final models.Data d3 = await api.list();
-  for (models.Item item in d3.items) {
+  final models.Items items3 = await api.list();
+  for (models.Item item in items3.items) {
     print(item);
   }
 

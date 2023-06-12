@@ -1,18 +1,18 @@
 part of api.models;
 
-class Data {
+class Items {
   final List<Item> items;
 
-  const Data({required this.items});
+  const Items({required this.items});
 
   @override
   String toString() =>
-      "Data#$hashCode(items: ${[for (final Item item in items) '$item, ']})";
+      "Items#$hashCode(items: ${[for (final Item item in items) '$item, ']})";
 }
 
-class DataSerializer extends Serializer<Data> {
+class ItemsSerializer extends Serializer<Items> {
   @override
-  Data fromMap(Map<String, dynamic> map) => Data(
+  Items fromMap(Map<String, dynamic> map) => Items(
         items: map['items'] != null
             ? [
                 for (final Map<String, dynamic> v in map['items'])
@@ -22,7 +22,7 @@ class DataSerializer extends Serializer<Data> {
       );
 
   @override
-  Map<String, dynamic> toMap(Data obj) => <String, dynamic>{
+  Map<String, dynamic> toMap(Items obj) => <String, dynamic>{
         "items": [
           for (final Item item in obj.items) ItemSerializer().toMap(item)
         ],

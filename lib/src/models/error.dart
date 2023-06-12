@@ -1,14 +1,14 @@
 part of api.models;
 
-class Error {
+class Error implements Exception {
   final int code;
   final String message;
 
   const Error({required this.code, required this.message});
 
   @override
-  String toString() => "Error#$hashCode(code: $code, message: $message)";
-
+  String toString() => "Error#$hashCode(code: $code, "
+      "message: $message)";
 }
 
 class ErrorSerializer extends Serializer<Error> {

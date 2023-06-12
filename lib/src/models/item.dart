@@ -1,18 +1,18 @@
 part of api.models;
 
 enum ItemType with Comparable<ItemType> {
-  folder(0),
-  file(1),
-  link(2);
+  folder(1),
+  file(2),
+  link(3);
 
   const ItemType(this.compareValue);
 
   factory ItemType.fromValue(int v) {
     switch (v) {
       case 1:
-        return file;
-      case 2:
         return folder;
+      case 2:
+        return file;
       case 3:
         return link;
       default:
@@ -22,9 +22,9 @@ enum ItemType with Comparable<ItemType> {
 
   int toValue() {
     switch (this) {
-      case file:
-        return 1;
       case folder:
+        return 1;
+      case file:
         return 2;
       case link:
         return 3;
@@ -72,15 +72,15 @@ class Item {
 class ItemSerializer extends Serializer<Item> {
   @override
   Item fromMap(Map<String, dynamic> map) => Item(
-        title: b64dec(map['title']),
-        path: map['path'] != null ? b64dec(map['path']) : null,
+        title: map['title'],
+        path: map['path'],
         type: ItemType.fromValue(map['type']),
       );
 
   @override
   Map<String, dynamic> toMap(Item obj) => <String, dynamic>{
-        "title": b64enc(obj.title),
+        "title": obj.title,
         "type": obj.type.toValue(),
-        if (obj.path != null) "path": b64enc(obj.path!),
+        if (obj.path != null) "path": obj.path!,
       };
 }
